@@ -1,2 +1,2 @@
 # OSS_Smart_Multi_Insect_House
-OSS_Firmware.ino, config.h use together
+Do not enter config.h! (Personal info problem)
