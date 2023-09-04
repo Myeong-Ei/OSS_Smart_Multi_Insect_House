@@ -2,30 +2,14 @@
 #error This code is designed to run on ESP8266 and ESP8266-based boards! Please check your Tools->Board setting.
 #endif
 
-// These define's must be placed at the beginning before #include "ESP8266TimerInterrupt.h"
-// _TIMERINTERRUPT_LOGLEVEL_ from 0 to 4
-// Don't define _TIMERINTERRUPT_LOGLEVEL_ > 0. Only for special ISR debugging only. Can hang the system.
-#define TIMER_INTERRUPT_DEBUG         0
-#define _TIMERINTERRUPT_LOGLEVEL_     0
-
-// Select a Timer Clock
-#define USING_TIM_DIV1                false           // for shortest and most accurate timer
-#define USING_TIM_DIV16               false           // for medium time and medium accurate timer
-#define USING_TIM_DIV256              true            // for longest timer but least accurate. Default
-
-
-
-
 #include <Wire.h>
 #include <ESP8266WiFi.h>
 #include <AHTxx.h>
 #include "config.h"
 #include "ESP8266TimerInterrupt.h"
 
-
 #define HUMIDIFIER 2
 #define SOIL_SENSOR A0
-
 
 AdafruitIO_Feed *temp_val = io.feed("temperature_value");
 AdafruitIO_Feed *temp_send = io.feed("temperature_send");
@@ -258,10 +242,10 @@ void humidifier_message(AdafruitIO_Data *data) {
 
 void operateFarm(){
   if(ahtTemp > std_temp && ahtHumi < std_humi && soilValue < std_soil){
-    digitalWrite(HUMIDIFIER, HIGH);
+    digitalWrite(HUMIDIFIER, LOW);
   }
   //-------------------------------------------
-  else if(ahtTemp < std_temp && ahtHumi < std_humi && soilValue < std_soil){
-    digitalWrite(HUMIDIFIER, LOW);
+  else if(ahtTemp < std_temp && ahtHumi > std_humi && soilValue > std_soil){
+    digitalWrite(HUMIDIFIER, HIGH);
   }
 }

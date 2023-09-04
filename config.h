@@ -3,7 +3,7 @@
 // visit io.adafruit.com if you need to create an account,
 // or if you need your Adafruit IO key.
 #define IO_USERNAME "MyeongEi"
-#define IO_KEY "aio_TagF32o5Ft1ScvJonmBy6Z2TbDDi"   //IO key 항상 확인하기!
+#define IO_KEY "aio_xjgC01xV67p6g4b0A3RRLdT4BCf1"   //IO key 항상 확인하기!
 
 /******************************* WIFI **************************************/
 
