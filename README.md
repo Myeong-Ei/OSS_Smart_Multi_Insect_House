@@ -11,3 +11,5 @@ flaticon.com
 KoPub 돋움체
 
 Firmware Copyright
+
+끊임없이 수정하고 시도하는 중......
