@@ -1,9 +1,9 @@
+#include <EEPROM.h>
 #include <Ticker.h>
 #include <Wire.h>
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
 #include <AHTxx.h>
-#include "ESP8266TimerInterrupt.h"
 
 #define HUMIDIFIER 15
 #define SOIL_SENSOR A0
@@ -11,8 +11,8 @@
 
 unsigned long lastMsg = 0;
 
-const char* ssid = "wi_dje21";
-const char* password = "Djedsmhspw2015!";
+const char* ssid = "SK_WiFiGIGAE52A_2.4G";
+const char* password = "BGWB7@6319";
 const char* mqtt_server = "broker.mqtt-dashboard.com";
 
 float ahtValue = 0, ahtTemp = 0, ahtHumi = 0;
@@ -32,16 +32,27 @@ WiFiClient espClient;
 PubSubClient client(espClient);
 
 void operate_humi() {
+  
+  
   if (std_temp > ahtTemp && std_humi < ahtHumi) {
-    Serial.print("Humidifier can't work now!");
+    Serial.println(F("Humidifier can't work now!"));
     digitalWrite(HUMIDIFIER, LOW);
   }
   else {
+    Serial.println(F("Tickle Timer Disable!"));
+    timer.detach();  // Tickle Timer Disable
+    
     digitalWrite(HUMIDIFIER, HIGH);
-    Serial.print("Humidifier turnning ON\n");
+    Serial.print(F("Humidifier turnning ON\n"));
     delay(5000);
     digitalWrite(HUMIDIFIER, LOW);
+
+    Serial.println(F("Tickle Timer Enable!"));
+    sensor_state = 1;
+    timer.attach_ms(2000, measureTempHumi);  // Tickle Timer Enable
   }
+
+  
 }
 
 //----------------------------------MQTT Connection----------------------------
@@ -59,7 +70,7 @@ void setup_wifi() {
     delay(500);
     Serial.print(".");
   }
-
+ 
   randomSeed(micros());
 
   Serial.println("");
@@ -69,8 +80,8 @@ void setup_wifi() {
 }
 
 void callback(char* topic, byte* payload, unsigned int length) {
-  static String myTopic = topic;
-  static String myPayload = (char *)payload;
+  String myTopic = topic;
+  String myPayload = (char *)payload;
 
   Serial.print("Message arrived [");
   Serial.print(myTopic);
@@ -83,19 +94,22 @@ void callback(char* topic, byte* payload, unsigned int length) {
   //--------------------------Topic, Payload-------------------------------
 
   if (myTopic.equals("MyeongEi/OSS/Temp/in")) {
+    EEPROM.write(0, (byte)myPayload.toInt());
     std_temp = myPayload.toInt();
     Serial.print("\nStandard Temp : ");
-    Serial.println(std_temp);
+    Serial.println(EEPROM.read(0));
   }
   else if (myTopic.equals("MyeongEi/OSS/Humi/in")) {
+    EEPROM.write(1, (byte)myPayload.toInt());
     std_humi = myPayload.toInt();
-    Serial.print("Standard Humi : ");
-    Serial.println(std_humi);
+    Serial.print("\nStandard Humi : ");
+    Serial.println(EEPROM.read(1));
   }
   else if (myTopic.equals("MyeongEi/OSS/Soil_Moisture/in")) {
+    EEPROM.write(2, (byte)myPayload.toInt());
     std_soil = myPayload.toInt();
-    Serial.print("Standard Soil Moisture : ");
-    Serial.println(std_soil);
+    Serial.print("\nStandard Soil Moisture : ");
+    Serial.println(EEPROM.read(2));
   }
   else if (myTopic.equals("MyeongEi/OSS/Humidifier/in") && payload[0] == '1') {
     operate_humi();
@@ -258,10 +272,10 @@ void measureSoilMoisture() {
 }
 
 void operateFarm() {
-  if (ahtTemp > std_temp && ahtHumi < std_humi && soilValue < std_soil) {
+  if (ahtTemp > std_temp && ahtHumi < std_humi) {
     digitalWrite(HUMIDIFIER, HIGH);
   }
-  else if (ahtTemp < std_temp && ahtHumi > std_humi && soilValue > std_soil) {
+  else if (ahtTemp < std_temp && ahtHumi > std_humi) {
     digitalWrite(HUMIDIFIER, LOW);
   }
 }
@@ -269,6 +283,10 @@ void operateFarm() {
 void setup() {
   pinMode(HUMIDIFIER, OUTPUT);
   Serial.begin(115200);
+
+  EEPROM.begin(4096);    // 0 : Temperature
+                         // 1 : Humidity
+                         // 2 : Soil Moisture
 
   setup_wifi();
   client.setServer(mqtt_server, 1883);
@@ -290,8 +308,13 @@ void setup() {
   Serial.println(F("AHT10 OK"));
   sensor_state = 1;
   timer.attach_ms(2000, measureTempHumi);
+  
 
   //------------------------------------------------------------------------------------------
+
+  std_temp = EEPROM.read(0);
+  std_humi = EEPROM.read(1);
+  std_soil = EEPROM.read(2);
 }
 
 
@@ -302,13 +325,16 @@ void loop() {
   }
   client.loop();
 
-  //operateFarm();
+  operateFarm();
 
   unsigned long now = millis();
   if (now - lastMsg > 2000) {
     lastMsg = now;
+    
+    
     measureSoilMoisture();
 
+    
     //-------------------Publish area--------------------
     snprintf(temp_buf, BUFF_SIZE, "%.1f", ahtTemp);
     snprintf(humi_buf, BUFF_SIZE, "%.1f", ahtHumi);
@@ -316,5 +342,14 @@ void loop() {
     client.publish("MyeongEi/OSS/Temp/out", temp_buf);
     client.publish("MyeongEi/OSS/Humi/out", humi_buf);
     client.publish("MyeongEi/OSS/Soil_Moisture/out", soil_buf);
+    //---------------------------------------------------
+
+    Serial.print("\nStandard Temp : ");
+    Serial.println(std_temp);
+    Serial.print("Standard Humi : ");
+    Serial.println(std_humi);
+    Serial.print("Standard Soil Moisture : ");
+    Serial.println(std_soil);
+    Serial.print("\n");
   }
 }
